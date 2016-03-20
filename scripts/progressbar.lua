@@ -85,6 +85,9 @@ local settings = {
   ['top-hover-zone-height'] = 40,
   ['bar-height-inactive'] = 2,
   ['bar-height-active'] = 8,
+  ['chapter-marker-width'] = 2,
+  ['chapter-marker-before'] = '7A77F2',
+  ['chapter-marker-after'] = '2D2D2D',
   ['pause-indicator'] = true,
   ['request-display-duration'] = 1,
   ['redraw-period'] = 0.03
@@ -720,99 +723,53 @@ end
 local ChapterMarker
 do
   local _class_0
-  local _parent_0 = Subscriber
+  local minWidth, minHeight, maxHeight, beforeColor, afterColor
   local _base_0 = {
     stringify = function(self)
-      if self.passed then
-        self.line[2][7] = [[\c&H2D2D2D&]]
-      else
-        self.line[2][7] = [[\c&H7A77F2&]]
-      end
-      if self.hovered or self.animation.isRegistered then
-        return table.concat({
-          table.concat(self.line[1]),
-          table.concat(self.line[2])
-        }, '\n')
-      else
-        return table.concat(self.line[2])
-      end
+      return table.concat(self.line)
     end,
     updateSize = function(self, w, h)
-      self.x = math.floor(w * self.position)
-      self.y = h - settings['hover-zone-height'] * settings['bar-height-inactive']
-      self.line[1][2] = ([[%d,%d]]):format(self.x + 10, h - settings['hover-zone-height'] - 10)
-      self.line[2][2] = ([[%d,%d]]):format(self.x + 10, h)
+      self.line[2] = ([[%d,%d]]):format(math.floor(self.position * w), h)
       return true
     end,
-    animateAlpha = function(self, animation, value)
-      self.line[1][4] = ([[%02X]]):format(value)
-      self.needsUpdate = true
-    end,
     animateSize = function(self, value)
-      self.line[2][4] = ([[%g]]):format(value * 100 + 100)
-      self.line[2][6] = ([[%g]]):format(value * 300 + 100)
+      self.line[6] = ([[%g]]):format((maxHeight - minHeight) * value + minHeight)
     end,
-    update = function(self, inputState, position)
-      local update = _class_0.__parent.__base.update(self, inputState)
-      local changed = self.passed
-      self.passed = position > self.position
-      update = update or changed ~= self.passed
+    update = function(self, position)
+      local update = false
+      if not self.passed and (position > self.position) then
+        self.line[8] = afterColor
+        self.passed = true
+        update = true
+      elseif self.passed and (position < self.position) then
+        self.line[8] = beforeColor
+        self.passed = false
+        update = true
+      end
       return update
     end
   }
   _base_0.__index = _base_0
-  setmetatable(_base_0, _parent_0.__base)
   _class_0 = setmetatable({
-    __init = function(self, animationQueue, title, position, w, h)
-      self.animationQueue, self.position = animationQueue, position
-      _class_0.__parent.__init(self)
-      self.x = math.floor(w * self.position) - 10
-      self.y = h - settings['hover-zone-height'] * settings['bar-height-inactive']
-      self.w = 20
-      self.h = settings['hover-zone-height'] * settings['bar-height-inactive']
+    __init = function(self, position, w, h)
+      self.position = position
       self.line = {
-        {
-          [[{\an2\bord2\c&H7A77F2&\3c&H2D2D2D\fs30\pos(]],
-          ([[%d,%d]]):format(self.x + 10, h - settings['hover-zone-height'] - 10),
-          [[)\alpha&H]],
-          [[FF]],
-          ([[&}%s]]):format(title)
-        },
-        {
-          [[{\an2\bord0\p1\pos(]],
-          ([[%d,%d]]):format(self.x + 10, h),
-          [[)\fscx]],
-          100,
-          [[\fscy]],
-          100,
-          [[\c&H7A77F2&]],
-          [[}m 0 0 l 2 0 2 2 0 2]]
-        }
+        [[{\an2\bord0\p1\pos(]],
+        ([[%d,%d]]):format(math.floor(self.position * w), h),
+        [[)\fscx]],
+        ([[%g]]):format(minWidth),
+        [[\fscy]],
+        ([[%g]]):format(minHeight),
+        [[\c&H]],
+        beforeColor,
+        [[&}m 0 0 l 1 0 1 1 0 1]]
       }
       self.passed = false
-      self.animation = Animation(255, 0, 0.25, (function()
-        local _base_1 = self
-        local _fn_0 = _base_1.animateAlpha
-        return function(...)
-          return _fn_0(_base_1, ...)
-        end
-      end)())
     end,
     __base = _base_0,
-    __name = "ChapterMarker",
-    __parent = _parent_0
+    __name = "ChapterMarker"
   }, {
-    __index = function(cls, name)
-      local val = rawget(_base_0, name)
-      if val == nil then
-        local parent = rawget(cls, "__parent")
-        if parent then
-          return parent[name]
-        end
-      else
-        return val
-      end
-    end,
+    __index = _base_0,
     __call = function(cls, ...)
       local _self_0 = setmetatable({}, _base_0)
       cls.__init(_self_0, ...)
@@ -820,9 +777,12 @@ do
     end
   })
   _base_0.__class = _class_0
-  if _parent_0.__inherited then
-    _parent_0.__inherited(_parent_0, _class_0)
-  end
+  local self = _class_0
+  minWidth = settings['chapter-marker-width'] * 100
+  minHeight = settings['bar-height-inactive'] * 100
+  maxHeight = settings['bar-height-active'] * 100
+  beforeColor = settings['chapter-marker-before']
+  afterColor = settings['chapter-marker-after']
   ChapterMarker = _class_0
 end
 local Chapters
@@ -836,50 +796,45 @@ do
       local chapters = mp.get_property_native('chapter-list', { })
       for _index_0 = 1, #chapters do
         local chapter = chapters[_index_0]
-        table.insert(self.markers, ChapterMarker(self.animationQueue, chapter.title, chapter.time / totalTime, w, h))
+        local marker = ChapterMarker(chapter.time / totalTime, w, h)
+        table.insert(self.markers, marker)
+        table.insert(self.line, marker:stringify())
       end
     end,
     stringify = function(self)
       return table.concat(self.line, '\n')
     end,
+    redrawMarker = function(self, i)
+      self.line[i] = self.markers[i]:stringify()
+    end,
     redrawMarkers = function(self)
-      self.line = { }
-      local _list_0 = self.markers
-      for _index_0 = 1, #_list_0 do
-        local marker = _list_0[_index_0]
-        table.insert(self.line, marker:stringify())
+      for i, marker in ipairs(self.markers) do
+        self.line[i] = marker:stringify()
       end
     end,
     updateSize = function(self, w, h)
       _class_0.__parent.__base.updateSize(self, w, h)
-      local _list_0 = self.markers
-      for _index_0 = 1, #_list_0 do
-        local marker = _list_0[_index_0]
+      for i, marker in ipairs(self.markers) do
         marker:updateSize(w, h)
+        self.line[i] = marker:stringify()
       end
-      self:redrawMarkers()
       return true
     end,
     animateSize = function(self, animation, value)
-      local _list_0 = self.markers
-      for _index_0 = 1, #_list_0 do
-        local marker = _list_0[_index_0]
+      for i, marker in ipairs(self.markers) do
         marker:animateSize(value)
+        self.line[i] = marker:stringify()
       end
       self.needsUpdate = true
     end,
     update = function(self, inputState)
       local update = _class_0.__parent.__base.update(self, inputState)
       local currentPosition = mp.get_property_number('percent-pos', 0) * 0.01
-      local _list_0 = self.markers
-      for _index_0 = 1, #_list_0 do
-        local marker = _list_0[_index_0]
-        if marker:update(inputState, currentPosition) then
+      for i, marker in ipairs(self.markers) do
+        if marker:update(currentPosition) then
+          self:redrawMarker(i)
           update = true
         end
-      end
-      if update then
-        self:redrawMarkers()
       end
       return update
     end
