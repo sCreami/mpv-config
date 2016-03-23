@@ -60,37 +60,45 @@ local log = {
   end
 }
 local settings = {
-  font = 'Source Sans Pro Semibold',
+  ['hover-zone-height'] = 40,
+  ['top-hover-zone-height'] = 40,
+  ['enable-bar'] = true,
+  ['bar-height-inactive'] = 2,
+  ['bar-height-active'] = 8,
+  ['bar-foreground'] = 'FC799E',
+  ['bar-background'] = '2D2D2D',
+  ['enable-elapsed-time'] = true,
+  ['elapsed-foreground'] = 'FC799E',
+  ['elapsed-background'] = '2D2D2D',
+  ['enable-remaining-time'] = true,
+  ['remaining-foreground'] = 'FC799E',
+  ['remaining-background'] = '2D2D2D',
+  ['enable-hover-time'] = true,
+  ['hover-time-foreground'] = 'FC799E',
+  ['hover-time-background'] = '2D2D2D',
+  ['enable-title'] = true,
   ['title-font-size'] = 30,
+  ['title-foreground'] = 'FC799E',
+  ['title-background'] = '2D2D2D',
+  ['pause-indicator'] = true,
+  ['pause-indicator-foreground'] = 'FC799E',
+  ['pause-indicator-background'] = '2D2D2D',
+  ['enable-chapter-markers'] = true,
+  ['chapter-marker-width'] = 2,
+  ['chapter-marker-width-active'] = 4,
+  ['chapter-marker-active-height-fraction'] = 1,
+  ['chapter-marker-before'] = '7A77F2',
+  ['chapter-marker-after'] = '2D2D2D',
+  ['request-display-duration'] = 1,
+  ['redraw-period'] = 0.03,
+  ['font'] = 'Source Sans Pro Semibold',
   ['time-font-size'] = 30,
   ['hover-time-font-size'] = 26,
   ['hover-time-left-margin'] = 120,
   ['hover-time-right-margin'] = 130,
   ['elapsed-offscreen-pos'] = -100,
   ['remaining-offscreen-pos'] = -100,
-  ['title-offscreen-pos'] = -40,
-  ['bar-foreground'] = 'FC799E',
-  ['bar-background'] = '2D2D2D',
-  ['elapsed-foreground'] = 'FC799E',
-  ['elapsed-background'] = '2D2D2D',
-  ['remaining-foreground'] = 'FC799E',
-  ['remaining-background'] = '2D2D2D',
-  ['hover-time-foreground'] = 'FC799E',
-  ['hover-time-background'] = '2D2D2D',
-  ['title-foreground'] = 'FC799E',
-  ['title-background'] = '2D2D2D',
-  ['pause-indicator-foreground'] = 'FC799E',
-  ['pause-indicator-background'] = '2D2D2D',
-  ['hover-zone-height'] = 40,
-  ['top-hover-zone-height'] = 40,
-  ['bar-height-inactive'] = 2,
-  ['bar-height-active'] = 8,
-  ['chapter-marker-width'] = 2,
-  ['chapter-marker-before'] = '7A77F2',
-  ['chapter-marker-after'] = '2D2D2D',
-  ['pause-indicator'] = true,
-  ['request-display-duration'] = 1,
-  ['redraw-period'] = 0.03
+  ['title-offscreen-pos'] = -40
 }
 options.read_options(settings, script_name)
 local OSDAggregator
@@ -330,8 +338,8 @@ do
       if self.accel then
         progress = math.pow(progress, self.accel)
       end
-      local value = (1 - progress) * self.initialValue + progress * self.endValue
-      self:updateCb(value)
+      self.value = (1 - progress) * self.initialValue + progress * self.endValue
+      self:updateCb(self.value)
       if self.isFinished and self.finishedCb then
         self:finishedCb()
       end
@@ -365,6 +373,7 @@ do
         accel = 1
       end
       self.initialValue, self.endValue, self.duration, self.updateCb, self.finishedCb, self.accel = initialValue, endValue, duration, updateCb, finishedCb, accel
+      self.value = self.initialValue
       self.startTime = mp.get_time()
       self.currentTime = self.startTime
       self.durationR = 1 / self.duration
@@ -514,6 +523,7 @@ do
     updateSize = function(self, w, h)
       _class_0.__parent.__base.updateSize(self, w, h)
       self.yPos = h - barSize
+      self.sizeChanged = true
     end
   }
   _base_0.__index = _base_0
@@ -723,7 +733,7 @@ end
 local ChapterMarker
 do
   local _class_0
-  local minWidth, minHeight, maxHeight, beforeColor, afterColor
+  local minWidth, maxWidth, minHeight, maxHeight, maxHeightFrac, beforeColor, afterColor
   local _base_0 = {
     stringify = function(self)
       return table.concat(self.line)
@@ -733,7 +743,8 @@ do
       return true
     end,
     animateSize = function(self, value)
-      self.line[6] = ([[%g]]):format((maxHeight - minHeight) * value + minHeight)
+      self.line[4] = ([[%g]]):format((maxWidth - minWidth) * value + minWidth)
+      self.line[6] = ([[%g]]):format((maxHeight * maxHeightFrac - minHeight) * value + minHeight)
     end,
     update = function(self, position)
       local update = false
@@ -779,8 +790,10 @@ do
   _base_0.__class = _class_0
   local self = _class_0
   minWidth = settings['chapter-marker-width'] * 100
+  maxWidth = settings['chapter-marker-width-active'] * 100
   minHeight = settings['bar-height-inactive'] * 100
   maxHeight = settings['bar-height-active'] * 100
+  maxHeightFrac = settings['chapter-marker-active-height-fraction']
   beforeColor = settings['chapter-marker-before']
   afterColor = settings['chapter-marker-after']
   ChapterMarker = _class_0
@@ -791,6 +804,7 @@ do
   local _parent_0 = Subscriber
   local _base_0 = {
     createMarkers = function(self, w, h)
+      self.line = { }
       self.markers = { }
       local totalTime = mp.get_property_number('length', 0)
       local chapters = mp.get_property_native('chapter-list', { })
@@ -967,6 +981,7 @@ do
   local _base_0 = {
     updateSize = function(self, w, h)
       _class_0.__parent.__base.updateSize(self, w, h)
+      self.position = self.w - self.animation.value
       self.line[2] = ([[%g,%g]]):format(self.position, self.yPos)
       return true
     end,
@@ -1048,14 +1063,19 @@ do
       self.line[4] = ([[%02X]]):format(value)
       self.needsUpdate = true
     end,
+    updateSize = function(self, w, h)
+      _class_0.__parent.__base.updateSize(self, w, h)
+      self.yposChanged = true
+    end,
     update = function(self, inputState)
       do
         local _with_0 = inputState
-        local update = _class_0.__parent.__base.update(self, inputState, self:containsPoint(_with_0.mouseX, _with_0.mouseY))
+        local update = _class_0.__parent.__base.update(self, inputState, (self:containsPoint(_with_0.mouseX, _with_0.mouseY) and _with_0.mouseInWindow))
         if update or self.hovered then
-          if _with_0.mouseX ~= self.lastX or _with_0.mouseY ~= self.lastY then
+          if _with_0.mouseX ~= self.lastX or self.sizeChanged then
             self.line[2] = ("%g,%g"):format(math.min(self.w - rightMargin, math.max(leftMargin, _with_0.mouseX)), self.yPos)
-            self.lastX, self.lastY = _with_0.mouseX, _with_0.mouseY
+            self.sizeChanged = false
+            self.lastX = _with_0.mouseX
             local hoverTime = mp.get_property_number('length', 0) * _with_0.mouseX / self.w
             if hoverTime ~= self.lastTime and (self.hovered or self.animation.isRegistered) then
               update = true
@@ -1084,7 +1104,6 @@ do
       }
       self.lastTime = 0
       self.lastX = -1
-      self.lastY = -1
       self.position = -100
       self.animation = Animation(255, 0, 0.25, (function()
         local _base_1 = self
@@ -1296,20 +1315,29 @@ do
 end
 local aggregator = OSDAggregator()
 local animationQueue = AnimationQueue(aggregator)
-local progressBar = ProgressBar(animationQueue)
-local progressBarBackground = ProgressBarBackground(animationQueue)
-local chapters = Chapters(animationQueue)
-local timeElapsed = TimeElapsed(animationQueue)
-local timeRemaining = TimeRemaining(animationQueue)
-local hoverTime = HoverTime(animationQueue)
-local playlist = Playlist(animationQueue)
-aggregator:addSubscriber(progressBarBackground)
-aggregator:addSubscriber(progressBar)
-aggregator:addSubscriber(chapters)
-aggregator:addSubscriber(timeElapsed)
-aggregator:addSubscriber(timeRemaining)
-aggregator:addSubscriber(hoverTime)
-aggregator:addSubscriber(playlist)
+if settings['enable-bar'] then
+  aggregator:addSubscriber(ProgressBarBackground(animationQueue))
+  aggregator:addSubscriber(ProgressBar(animationQueue))
+end
+local chapters = nil
+if settings['enable-chapter-markers'] then
+  chapters = Chapters(animationQueue)
+  aggregator:addSubscriber(chapters)
+end
+if settings['enable-elapsed-time'] then
+  aggregator:addSubscriber(TimeElapsed(animationQueue))
+end
+if settings['enable-remaining-time'] then
+  aggregator:addSubscriber(TimeRemaining(animationQueue))
+end
+if settings['enable-hover-time'] then
+  aggregator:addSubscriber(HoverTime(animationQueue))
+end
+local playlist = nil
+if settings['enable-title'] then
+  playlist = Playlist(animationQueue)
+  aggregator:addSubscriber(playlist)
+end
 if settings['pause-indicator'] then
   local notFrameStepping = true
   local PauseIndicatorWrapper
@@ -1340,8 +1368,12 @@ local initDraw
 initDraw = function()
   mp.unregister_event(initDraw)
   local width, height = mp.get_osd_size()
-  chapters:createMarkers(width, height)
-  playlist:updatePlaylistInfo()
+  if chapters then
+    chapters:createMarkers(width, height)
+  end
+  if playlist then
+    playlist:updatePlaylistInfo()
+  end
   return mp.command('script-message-to osc disable-osc')
 end
 local fileLoaded
