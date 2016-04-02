@@ -1259,7 +1259,7 @@ do
     update = function(self, inputState)
       do
         local _with_0 = inputState
-        _class_0.__parent.__base.update(self, inputState, (self:containsPoint(_with_0.mouseX, _with_0.mouseY) or self.topBox:containsPoint(_with_0.mouseX, _with_0.mouseY)))
+        _class_0.__parent.__base.update(self, inputState, self.topBox:containsPoint(_with_0.mouseX, _with_0.mouseY))
         return _with_0
       end
     end
