@@ -59,36 +59,40 @@ local log = {
     return msg.info(table.concat(result, "\n"))
   end
 }
+local FG_PLACEHOLDER = '__FG__'
+local BG_PLACEHOLDER = '__BG__'
 local settings = {
   ['hover-zone-height'] = 40,
   ['top-hover-zone-height'] = 40,
+  ['foreground'] = 'FC799E',
+  ['background'] = '2D2D2D',
   ['enable-bar'] = true,
   ['bar-height-inactive'] = 2,
   ['bar-height-active'] = 8,
-  ['bar-foreground'] = 'FC799E',
-  ['bar-background'] = '2D2D2D',
+  ['bar-foreground'] = FG_PLACEHOLDER,
+  ['bar-background'] = BG_PLACEHOLDER,
   ['enable-elapsed-time'] = true,
-  ['elapsed-foreground'] = 'FC799E',
-  ['elapsed-background'] = '2D2D2D',
+  ['elapsed-foreground'] = FG_PLACEHOLDER,
+  ['elapsed-background'] = BG_PLACEHOLDER,
   ['enable-remaining-time'] = true,
-  ['remaining-foreground'] = 'FC799E',
-  ['remaining-background'] = '2D2D2D',
+  ['remaining-foreground'] = FG_PLACEHOLDER,
+  ['remaining-background'] = BG_PLACEHOLDER,
   ['enable-hover-time'] = true,
-  ['hover-time-foreground'] = 'FC799E',
-  ['hover-time-background'] = '2D2D2D',
+  ['hover-time-foreground'] = FG_PLACEHOLDER,
+  ['hover-time-background'] = BG_PLACEHOLDER,
   ['enable-title'] = true,
   ['title-font-size'] = 30,
-  ['title-foreground'] = 'FC799E',
-  ['title-background'] = '2D2D2D',
+  ['title-foreground'] = FG_PLACEHOLDER,
+  ['title-background'] = BG_PLACEHOLDER,
   ['pause-indicator'] = true,
-  ['pause-indicator-foreground'] = 'FC799E',
-  ['pause-indicator-background'] = '2D2D2D',
+  ['pause-indicator-foreground'] = FG_PLACEHOLDER,
+  ['pause-indicator-background'] = BG_PLACEHOLDER,
   ['enable-chapter-markers'] = true,
   ['chapter-marker-width'] = 2,
   ['chapter-marker-width-active'] = 4,
   ['chapter-marker-active-height-fraction'] = 1,
-  ['chapter-marker-before'] = '7A77F2',
-  ['chapter-marker-after'] = '2D2D2D',
+  ['chapter-marker-before'] = FG_PLACEHOLDER,
+  ['chapter-marker-after'] = BG_PLACEHOLDER,
   ['request-display-duration'] = 1,
   ['redraw-period'] = 0.03,
   ['font'] = 'Source Sans Pro Semibold',
@@ -101,6 +105,17 @@ local settings = {
   ['title-offscreen-pos'] = -40
 }
 options.read_options(settings, script_name)
+for key, value in pairs(settings) do
+  if key:match('-foreground') or key == 'chapter-marker-before' then
+    if value == FG_PLACEHOLDER then
+      settings[key] = settings.foreground
+    end
+  elseif key:match('-background') or key == 'chapter-marker-after' then
+    if value == BG_PLACEHOLDER then
+      settings[key] = settings.background
+    end
+  end
+end
 local OSDAggregator
 do
   local _class_0
@@ -1259,7 +1274,7 @@ do
     update = function(self, inputState)
       do
         local _with_0 = inputState
-        _class_0.__parent.__base.update(self, inputState, self.topBox:containsPoint(_with_0.mouseX, _with_0.mouseY))
+        _class_0.__parent.__base.update(self, inputState, (self.topBox:containsPoint(_with_0.mouseX, _with_0.mouseY)))
         return _with_0
       end
     end
