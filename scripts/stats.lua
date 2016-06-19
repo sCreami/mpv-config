@@ -13,8 +13,13 @@ local options = require 'mp.options'
 
 -- Options
 local o = {
-    ass_formatting = true,
+    -- Default key bindings
+    key_oneshot = "i",
+    key_toggle = "I",
+
     duration = 3,
+    redraw_delay = 2,           -- acts as duration in the toggling case
+    ass_formatting = true,
     debug = false,
 
     -- Text style
@@ -50,7 +55,7 @@ local o = {
 options.read_options(o)
 
 
-function main()
+function print_stats(duration)
     local stats = {
         header = "",
         file = "",
@@ -77,7 +82,7 @@ function main()
     add_video(stats)
     add_audio(stats)
 
-    mp.osd_message(join_stats(stats), o.duration)
+    mp.osd_message(join_stats(stats), duration or o.duration)
 end
 
 
@@ -86,7 +91,9 @@ function add_file(s)
     s[sec] = ""
 
     append_property(s, sec, "filename", {prefix="File:", nl="", indent=""})
-    append_property(s, sec, "metadata/title", {prefix="Title:"})
+    if not (mp.get_property_osd("filename") == mp.get_property_osd("media-title")) then
+        append_property(s, sec, "media-title", {prefix="Title:"})
+    end
     append_property(s, sec, "chapter", {prefix="Chapter:"})
     if append_property(s, sec, "cache-used", {prefix="Cache:"}) then
         append_property(s, sec, "demuxer-cache-duration",
@@ -107,10 +114,15 @@ function add_video(s)
     end
 
     if append_property(s, sec, "video-codec", {prefix="Video:", nl="", indent=""}) then
-        append_property(s, sec, "hwdec-active",
+        if not append_property(s, sec, "hwdec-current",
+                        {prefix="(hwdec:", nl="", indent=" ",
+                         no_prefix_markup=true, suffix=")"},
+                        {no=true, [""]=true}) then
+            append_property(s, sec, "hwdec-active",
                         {prefix="(hwdec)", nl="", indent=" ",
                          no_prefix_markup=true, no_value=true},
                         {no=true})
+        end
     end
     append_property(s, sec, "avsync", {prefix="A-V:"})
     if append_property(s, sec, "drop-frame-count", {prefix="Dropped:"}) then
@@ -142,7 +154,7 @@ function add_video(s)
     end
     append_property(s, sec, "window-scale", {prefix="Window Scale:"})
     append_property(s, sec, "video-params/aspect", {prefix="Aspect Ratio:"})
-    append_property(s, sec, "video-params/pixelformat", {prefix="Pixel format:"})
+    append_property(s, sec, "video-params/pixelformat", {prefix="Pixel Format:"})
     append_property(s, sec, "video-params/colormatrix", {prefix="Colormatrix:"})
     append_property(s, sec, "video-params/primaries", {prefix="Primaries:"})
     append_property(s, sec, "video-params/gamma", {prefix="Gamma:"})
@@ -275,4 +287,26 @@ function b(t)
     return o.b1 .. t .. o.b0
 end
 
-mp.add_key_binding("i", mp.get_script_name(), main, {repeatable=true})
+
+local timer = mp.add_periodic_timer(o.redraw_delay, function() print_stats(o.redraw_delay + 1) end)
+timer:kill()
+
+function toggle_stats()
+    if timer:is_enabled() then
+        timer:kill()
+        mp.osd_message("", 0)
+    else
+        timer:resume()
+        print_stats(o.redraw_delay + 1)
+    end
+end
+
+
+mp.add_key_binding(o.key_oneshot, "display_stats", print_stats, {repeatable=true})
+if pcall(function() timer:is_enabled() end) then
+    mp.add_key_binding(o.key_toggle, "display_stats_toggle", toggle_stats, {repeatable=false})
+else
+    local txt = "Please upgrade mpv to toggle stats"
+    mp.add_key_binding(o.key_toggle, "display_stats_toggle",
+                       function() print(txt) ; mp.osd_message(txt) end, {repeatable=false})
+end
