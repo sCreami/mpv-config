@@ -1,6 +1,6 @@
 local msg = require('mp.msg')
 local options = require('mp.options')
-local script_name = 'progressbar'
+local script_name = 'torque-progressbar'
 mp.get_osd_size = mp.get_osd_size or mp.get_screen_size
 local log = {
   debug = function(format, ...)

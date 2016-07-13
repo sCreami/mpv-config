@@ -1,0 +1,3 @@
+[submodule "scripts/mpv-stats"]
+	path = scripts/mpv-stats
+	url = git@github.com:Argon-/mpv-stats.git
