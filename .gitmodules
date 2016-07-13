@@ -1,3 +1,7 @@
 [submodule "scripts/mpv-stats"]
 	path = scripts/mpv-stats
 	url = git@github.com:Argon-/mpv-stats.git
+[submodule "scripts/mpv-progressbar"]
+	path = scripts/mpv-progressbar
+	url = git@github.com:torque/mpv-progressbar.git
+	branch = build
