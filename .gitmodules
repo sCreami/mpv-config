@@ -1,7 +1,13 @@
-[submodule "scripts/mpv-stats"]
+[submodule "stats"]
 	path = scripts/mpv-stats
-	url = git@github.com:Argon-/mpv-stats.git
-[submodule "scripts/mpv-progressbar"]
+	url = https://github.com/Argon-/mpv-stats.git
+[submodule "progressbar"]
 	path = scripts/mpv-progressbar
-	url = git@github.com:torque/mpv-progressbar.git
+	url = https://github.com/torque/mpv-progressbar.git
 	branch = build
+[submodule "FineSharp"]
+	path = shaders/mpv-finesharp
+	url = https://gist.github.com/a9a21ad1f6dd7d0b4452.git
+[submodule "SSimSuperRes"]
+	path = shaders/mpv-ssimsuperres
+	url = https://gist.github.com/2364ffa6e81540f29cb7ab4c9bc05b6b.git
